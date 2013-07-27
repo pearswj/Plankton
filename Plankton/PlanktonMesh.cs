@@ -11,17 +11,17 @@ namespace Plankton
     public class PlanktonMesh
     {
         #region "members"
-        public List<PlanktonVertex> Vertices;
-        public List<PlanktonHalfedge> Halfedges;
-        public List<PlanktonFace> Faces;
+        public PlanktonVertexList Vertices;
+        public PlanktonHalfEdgeList Halfedges;
+        public PlanktonFaceList Faces;
         #endregion
 
         #region "constructors"
         public PlanktonMesh() //blank constructor
         {
-            this.Faces = new List<PlanktonFace>();
-            this.Halfedges = new List<PlanktonHalfedge>();
-            this.Vertices = new List<PlanktonVertex>();
+            this.Faces = new PlanktonFaceList(this);
+            this.Halfedges = new PlanktonHalfEdgeList(this);
+            this.Vertices = new PlanktonVertexList(this);
         }
         public PlanktonMesh(Mesh M) //Create a Plankton Mesh from a Rhino Mesh
             : this()
@@ -210,150 +210,20 @@ namespace Plankton
         public PlanktonMesh(IEnumerable<Point3d> pts, IEnumerable<IEnumerable<int>> faces)
             : this()
         {
+            // TODO: Should we remove this constructor? I doesn't exactly do much...
+            
             // Add vertices
-            foreach (Point3d pt in pts)
-            {
-                this.Vertices.Add(new PlanktonVertex(pt));
-            }
+            this.Vertices.AddVertices(pts);
             
             // Add faces (and half-edges)
             foreach (IEnumerable<int> face in faces)
             {
-                this.AddFace(face);
+                this.Faces.AddFace(face);
             }
         }
         #endregion
 
         #region "general methods"
-        /// <summary>
-        /// Adds a new face to the mesh. Creates any halfedge pairs that are required.
-        /// </summary>
-        /// <param name="indices">The indices of the vertices which define this face, ordered anticlockwise.</param>
-        /// <returns>The index of the newly added face.</returns>
-        public int AddFace(IEnumerable<int> indices)
-        {
-            // This method always ensures that if a vertex lies on a boundary,
-            // vertex -> outgoingHalfedge -> adjacentFace == -1
-            
-            int[] array = indices.ToArray(); // using Linq for convenience
-            
-            int n = array.Length;
-            
-            // Don't allow degenerate faces
-            if (n < 3) return -1;
-            
-            // Check vertices
-            foreach (int i in array)
-            {
-                // Check that all vertex indices exist in this mesh
-                if (i < 0 || i >= this.Vertices.Count)
-                    throw new IndexOutOfRangeException("No vertex exists at this index.");
-                // Check that all vertices are on a boundary
-                int outgoing = this.Vertices[i].OutgoingHalfedge;
-                if (outgoing != -1 && this.Halfedges[outgoing].AdjacentFace != -1)
-                    return -1;
-            }
-            
-            // For each pair of vertices, check for an existing halfedge
-            // If it exists, check that it doesn't already have a face
-            // If it doesn't exist, mark for creation of a new halfedge pair
-            int[] loop = new int[n];
-            bool[] is_new = new bool[n];
-            List<int> newHalfedges = new List<int>();
-            for (int i = 0, ii = 1; i < n; i++, ii++, ii %= n)
-            {
-                int v1 = array[i], v2 = array[ii];
-                is_new[i] = true;
-                // Find existing edge, if it exists, by searching 'i'th vertex's neighbourhood
-                if (this.Vertices[v2].OutgoingHalfedge > -1)
-                {
-                    List<int> hs = this.VertexAllOutHE(v2);
-                    foreach (int h in hs)
-                    {
-                        if (v1 == this.Halfedges[this.PairHalfedge(h)].StartVertex)
-                        {
-                            // Don't allow non-manifold edges
-                            if (this.Halfedges[this.PairHalfedge(h)].AdjacentFace > -1) return -1;
-                            loop[i] = this.PairHalfedge(h);
-                            is_new[i] = false;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            // Now create any missing halfedge pairs...
-            // (This could be done in the loop above but it avoids having to tidy up
-            // any recently added halfedges should a non-manifold condition be found.)
-            for (int i = 0, ii = 1; i < n; i++, ii++, ii %= n)
-            {
-                if (is_new[i]) // new halfedge pair requireds
-                {
-                    int v1 = array[i], v2 = array[ii];
-                    loop[i] = this.Halfedges.Count;
-                    is_new[i] = true;
-                    // he->next = he->pair
-                    this.Halfedges.Add(new PlanktonHalfedge(v1, this.Faces.Count, loop[i] + 1));
-                    this.Halfedges.Add(new PlanktonHalfedge(v2, -1, loop[i]));
-                    this.Vertices[v2].OutgoingHalfedge = loop[i] + 1;
-                }
-                else
-                {
-                    // Link existing halfedge to new face
-                    this.Halfedges[loop[i]].AdjacentFace = this.Faces.Count;
-                }
-            }
-            
-            // Link halfedges
-            for (int i = 0, ii = 1; i < n; i++, ii++, ii %= n)
-            {
-                int v1 = array[i], v2 = array[ii];
-                int id = 0;
-                if (is_new[i])  id += 1;
-                if (is_new[ii]) id += 2;
-                
-                if (id > 0) // At least one of the halfedge pairs is new...
-                {
-                    // Link inner halfedges
-                    this.Halfedges[loop[i]].NextHalfedge = loop[ii];
-                    this.Halfedges[loop[ii]].PrevHalfedge = loop[i];
-                    
-                    // Link outer halfedges
-                    int firstHalfedge, currentHalfedge;
-                    switch (id)
-                    {
-                        case 1: // first is new, second is old
-                            
-                            firstHalfedge = loop[ii];
-                            currentHalfedge = firstHalfedge;
-                            do
-                            {
-                                int pair = PairHalfedge(currentHalfedge);
-                                currentHalfedge = this.Halfedges[pair].NextHalfedge;
-                            } while (this.Halfedges[PairHalfedge(currentHalfedge)].AdjacentFace > -1);
-                            this.Halfedges[PairHalfedge(currentHalfedge)].NextHalfedge = PairHalfedge(loop[i]);
-                            this.Halfedges[PairHalfedge(loop[i])].PrevHalfedge = PairHalfedge(currentHalfedge);
-                            break;
-                        case 2: // second is new, first is old
-                            int outer_next = this.Vertices[v2].OutgoingHalfedge;
-                            this.Halfedges[PairHalfedge(loop[ii])].NextHalfedge = outer_next;
-                            this.Halfedges[outer_next].PrevHalfedge = PairHalfedge(loop[ii]);
-                            break;
-                        case 3: // both are new
-                            this.Halfedges[PairHalfedge(loop[ii])].NextHalfedge = PairHalfedge(loop[i]);
-                            this.Halfedges[PairHalfedge(loop[i])].PrevHalfedge = PairHalfedge(loop[ii]);
-                            break;
-                    }
-                }
-            }
-            
-            int f = this.Faces.Count;
-            this.Faces.Add(new PlanktonFace());
-            this.Faces[f].FirstHalfedge = loop[n - 1];
-            
-            return f;
-        }
-
         public Mesh ToRhinoMesh()
         {
             // could add different options for triangulating ngons later
@@ -365,21 +235,21 @@ namespace Plankton
             }
             for (int i = 0; i < P.Faces.Count; i++)
             {
-                List<int> FaceVs = P.FaceVertices(i);
-                if (FaceVs.Count == 3)
+                int[] FaceVs = P.Faces.GetVertices(i);
+                if (FaceVs.Length == 3)
                 {
                     M.Faces.AddFace(FaceVs[0], FaceVs[1], FaceVs[2]);
                 }
-                if (FaceVs.Count == 4)
+                if (FaceVs.Length == 4)
                 {
                     M.Faces.AddFace(FaceVs[0], FaceVs[1], FaceVs[2], FaceVs[3]);
                 }
-                if (FaceVs.Count > 4)
+                if (FaceVs.Length > 4)
                 {
-                    M.Vertices.Add(P.FaceCentroid(i));
-                    for (int j = 0; j < FaceVs.Count; j++)
+                    M.Vertices.Add(P.Faces.FaceCentroid(i));
+                    for (int j = 0; j < FaceVs.Length; j++)
                     {
-                        M.Faces.AddFace(FaceVs[j], FaceVs[(j + 1) % FaceVs.Count], M.Vertices.Count - 1);
+                        M.Faces.AddFace(FaceVs[j], FaceVs[(j + 1) % FaceVs.Length], M.Vertices.Count - 1);
                     }
                 }
             }
@@ -392,10 +262,10 @@ namespace Plankton
             for (int i = 0; i < Faces.Count; i++)
             {
                 Polyline FacePoly = new Polyline();
-                List<int> VertIndexes = FaceVertices(i);
-                for (int j = 0; j <= VertIndexes.Count; j++)
+                int[] VertIndexes = this.Faces.GetVertices(i);
+                for (int j = 0; j <= VertIndexes.Length; j++)
                 {
-                    FacePoly.Add(Vertices[VertIndexes[j % VertIndexes.Count]].Position);
+                    FacePoly.Add(Vertices[VertIndexes[j % VertIndexes.Length]].Position);
                 }
                 Polylines.Add(FacePoly);
             }
@@ -422,14 +292,14 @@ namespace Plankton
 
             for (int i = 0; i < P.Faces.Count; i++)
             {
-                D.Vertices.Add(new PlanktonVertex(P.FaceCentroid(i)));
-                List<int> FaceHalfedges = P.FaceHEs(i);
-                for (int j = 0; j < FaceHalfedges.Count; j++)
+                D.Vertices.Add(new PlanktonVertex(P.Faces.FaceCentroid(i)));
+                int[] FaceHalfedges = P.Faces.GetHalfedges(i);
+                for (int j = 0; j < FaceHalfedges.Length; j++)
                 {
-                    if (P.Halfedges[P.PairHalfedge(FaceHalfedges[j])].AdjacentFace != -1)
+                    if (P.Halfedges[P.Halfedges.PairHalfedge(FaceHalfedges[j])].AdjacentFace != -1)
                     {
                         // D.Vertices[i].OutgoingHalfedge = FaceHalfedges[j];
-                        D.Vertices[D.Vertices.Count-1].OutgoingHalfedge = P.PairHalfedge(FaceHalfedges[j]);
+                        D.Vertices[D.Vertices.Count-1].OutgoingHalfedge = P.Halfedges.PairHalfedge(FaceHalfedges[j]);
                         break;
                     }
                 }
@@ -437,7 +307,7 @@ namespace Plankton
 
             for (int i = 0; i < P.Vertices.Count; i++)
             {
-                if (P.VertexNakedEdgeCount(i) == 0)
+                if (P.Vertices.NakedEdgeCount(i) == 0)
                 {
                     D.Faces.Add(new PlanktonFace());
                     // D.Faces[i].FirstHalfedge = P.PairHalfedge(P.Vertices[i].OutgoingHalfedge);
@@ -456,14 +326,14 @@ namespace Plankton
 
             for (int i = 0; i < P.Halfedges.Count; i++)
             {
-                if ((P.Halfedges[i].AdjacentFace != -1) & (P.Halfedges[P.PairHalfedge(i)].AdjacentFace != -1))
+                if ((P.Halfedges[i].AdjacentFace != -1) & (P.Halfedges[P.Halfedges.PairHalfedge(i)].AdjacentFace != -1))
                 {
                     PlanktonHalfedge DualHE = new PlanktonHalfedge();
                     PlanktonHalfedge PrimalHE = P.Halfedges[i];
                     //DualHE.StartVertex = PrimalHE.AdjacentFace;
-                    DualHE.StartVertex = P.Halfedges[P.PairHalfedge(i)].AdjacentFace;
+                    DualHE.StartVertex = P.Halfedges[P.Halfedges.PairHalfedge(i)].AdjacentFace;
 
-                    if (P.VertexNakedEdgeCount(PrimalHE.StartVertex) == 0)
+                    if (P.Vertices.NakedEdgeCount(PrimalHE.StartVertex) == 0)
                     {
                         //DualHE.AdjacentFace = P.Halfedges[P.PairHalfedge(i)].StartVertex;
                         DualHE.AdjacentFace = PrimalHE.StartVertex;
@@ -478,10 +348,10 @@ namespace Plankton
                     //this needs to be done repeatedly until no further change
 
                     //DualHE.NextHalfedge = P.Halfedges[P.PairHalfedge(i)].PrevHalfedge;
-                    DualHE.NextHalfedge = P.PairHalfedge(PrimalHE.PrevHalfedge);
+                    DualHE.NextHalfedge = P.Halfedges.PairHalfedge(PrimalHE.PrevHalfedge);
 
                     //DualHE.PrevHalfedge = P.PairHalfedge(PrimalHE.NextHalfedge);
-                    DualHE.PrevHalfedge = P.Halfedges[P.PairHalfedge(i)].NextHalfedge;
+                    DualHE.PrevHalfedge = P.Halfedges[P.Halfedges.PairHalfedge(i)].NextHalfedge;
 
                     DualHE.Index = newIndex;
 
@@ -490,28 +360,6 @@ namespace Plankton
                 }
             }
             return D;
-        }
-
-        public void FlipEdge(int E)
-        {
-
-            // to flip an edge
-            // update 2 start verts
-            // 2 adjacentfaces
-            // 6 nexts
-            // 6 prevs
-            // for each vert, check if need to update outgoing
-            // for each face, check if need to update start he
-        }
-
-        public void SplitEdge(int E)
-        {
-            // add a new vertex
-            // add 2 new faces
-        }
-
-        public void CollapseEdge(int E)
-        {
         }
 
         public void RefreshVertexNormals()
@@ -528,145 +376,6 @@ namespace Plankton
         //
 
         //skeletonize - build a new mesh with 4 faces for each original edge
-
-        #endregion
-
-        #region "Adjacencies"
-        
-        public List<int> VertexNeighbours(int V)
-            //get the vertices connected to a given vertex by an edge (aka 1-ring)
-        {
-            List<int> NeighbourVs = new List<int>();
-            int FirstHalfedge = PairHalfedge(Vertices[V].OutgoingHalfedge);
-            int CurrentHalfedge = FirstHalfedge;
-            do{
-                NeighbourVs.Add(Halfedges[CurrentHalfedge].StartVertex);
-                CurrentHalfedge = PairHalfedge(Halfedges[CurrentHalfedge].NextHalfedge);
-            } while (CurrentHalfedge != FirstHalfedge);
-            return NeighbourVs;
-        }
-
-        public List<int> VertexFaces(int V)
-            // get the faces which use this vertex
-        {
-            List<int> NeighbourFs = new List<int>();
-            int FirstHalfedge = Vertices[V].OutgoingHalfedge;
-            int CurrentHalfedge = FirstHalfedge;
-            do
-            {
-                NeighbourFs.Add(Halfedges[CurrentHalfedge].AdjacentFace);
-                CurrentHalfedge = Halfedges[PairHalfedge(CurrentHalfedge)].NextHalfedge;
-            } while (CurrentHalfedge != FirstHalfedge);
-            return NeighbourFs;
-        }
-
-
-        public List<int> VertexAllOutHE(int V) // all the outgoing Halfedges from a vertex
-        {
-            List<int> OutHEs = new List<int>();
-            int FirstHalfedge = Vertices[V].OutgoingHalfedge;
-            int CurrentHalfedge = FirstHalfedge;
-            do
-            {
-                OutHEs.Add(CurrentHalfedge);
-                CurrentHalfedge = Halfedges[PairHalfedge(CurrentHalfedge)].NextHalfedge;
-            } while (CurrentHalfedge != FirstHalfedge);
-            return OutHEs;
-        }
-
-        public List<int> VertexAllInHE(int V) // all the incoming Halfedges to a vertex
-        {
-            List<int> InHEs = new List<int>();
-            int FirstHalfedge = PairHalfedge(Vertices[V].OutgoingHalfedge);
-            int CurrentHalfedge = FirstHalfedge;
-            do
-            {
-                InHEs.Add(CurrentHalfedge);
-                CurrentHalfedge = PairHalfedge(Halfedges[CurrentHalfedge].NextHalfedge);
-            } while (CurrentHalfedge != FirstHalfedge);
-            return InHEs;
-        }
-
-        public List<int> FaceHEs(int F)
-        {
-            List<int> HEs = new List<int>();
-            int FirstHalfedge = Faces[F].FirstHalfedge;
-            int CurrentHalfedge = FirstHalfedge;
-            do
-            {
-                HEs.Add(CurrentHalfedge);
-                CurrentHalfedge = Halfedges[CurrentHalfedge].NextHalfedge;
-            }
-            while (CurrentHalfedge != FirstHalfedge);
-            return HEs;
-        }
-
-        public List<int> FaceVertices(int F)
-            //get the vertices making up a face
-        {
-            List<int> FaceVs = new List<int>();
-            int FirstHalfedge = Faces[F].FirstHalfedge;
-            int CurrentHalfedge = FirstHalfedge;
-            do
-            {
-                FaceVs.Add(Halfedges[CurrentHalfedge].StartVertex);
-                CurrentHalfedge = Halfedges[CurrentHalfedge].NextHalfedge;
-            }
-            while (CurrentHalfedge != FirstHalfedge);
-            return FaceVs;
-        }
-
-        public Point3d FaceCentroid(int F)
-            //the barycenter of a face's vertices
-        {
-            List<int> FaceVs = FaceVertices(F);
-            Point3d Centroid = new Point3d(0, 0, 0);
-            foreach (int i in FaceVs)
-            {
-                Centroid = Centroid + Vertices[i].Position;
-            }
-            Centroid *= 1.0 / FaceVs.Count;
-            return Centroid;
-        }
-
-        public int PairHalfedge(int I)
-        {
-            if (I % 2 == 0)
-            { return I + 1; }
-            else
-            { return I - 1; }
-        }
-
-        public int IncomingHalfedge(int I)
-        {
-            return PairHalfedge(Vertices[I].OutgoingHalfedge);
-        }
-
-        public int VertexNakedEdgeCount(int V)
-            //the number of connected halfedges which are naked
-            //(this should also be the number of naked connected actual *edges*
-            // - because if the hemesh is good then there should never be a pair of 2 boundary halfedges)
-        {
-            int NakedCount = 0;
-            List<int> Outgoing = VertexAllOutHE(V);
-            for (int i = 0; i < Outgoing.Count; i++)
-            {
-                if (Halfedges[Outgoing[i]].AdjacentFace == -1) { NakedCount++; }
-                if (Halfedges[PairHalfedge(Outgoing[i])].AdjacentFace == -1) { NakedCount++; }
-            }
-            return NakedCount;
-        }
-
-        public int FaceNakedEdgeCount(int F)
-        {
-            int NakedCount = 0;
-            List<int> FaceHEdges = FaceHEs(F);
-            foreach (int i in FaceHEdges)
-            {
-                if (Halfedges[PairHalfedge(i)].AdjacentFace == -1) { NakedCount++; }
-            }
-            return NakedCount;
-        }
 
         #endregion
     }
