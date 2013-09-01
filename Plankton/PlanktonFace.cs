@@ -5,14 +5,14 @@ namespace Plankton
     /// <summary>
     /// Represents a face in Plankton's halfedge mesh data structure.
     /// </summary>
-    public class PlanktonFace
+    public struct PlanktonFace
     {
         public int FirstHalfedge;
         
-        public PlanktonFace()
+        /*public PlanktonFace()
         {
             this.FirstHalfedge = -1;
-        }
+        }*/
         
         internal PlanktonFace(int halfedgeIndex)
         {

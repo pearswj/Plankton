@@ -186,7 +186,7 @@ namespace Plankton.Test
             PlanktonMesh pMesh = new PlanktonMesh();
             pMesh.Vertices.Add(0, 0, 0);
             
-            Assert.IsTrue(pMesh.Vertices.SetVertex(0, 1, 1, 1));
+            Assert.IsTrue(pMesh.Vertices.SetVertex(0, 1.0, 1.0, 1.0));
             
             PlanktonVertex v;
             v = pMesh.Vertices[0];
@@ -194,7 +194,7 @@ namespace Plankton.Test
             Assert.AreEqual(1, v.Y);
             Assert.AreEqual(1, v.Z);
             
-            Assert.IsTrue(pMesh.Vertices.SetVertex(1, 2f, 2f, 2f));
+            Assert.IsTrue(pMesh.Vertices.SetVertex(1, 2.0f, 2.0f, 2.0f));
             
             v = pMesh.Vertices[1];
             Assert.AreEqual(2, v.X);

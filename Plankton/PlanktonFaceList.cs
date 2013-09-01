@@ -46,7 +46,6 @@ namespace Plankton
         /// <returns>The index of the newly added face.</returns>
         internal int Add(PlanktonFace face)
         {
-            if (face == null) return -1;
             this._list.Add(face);
             return this.Count - 1;
         }
@@ -120,7 +119,7 @@ namespace Plankton
                 else
                 {
                     // Link existing halfedge to new face
-                    hs[loop[i]].AdjacentFace = this.Count;
+                    hs.SetAdjacentFace(loop[i], this.Count);
                 }
             }
             
@@ -166,8 +165,8 @@ namespace Plankton
                             // We have TWO boundaries to take care of here: first...
                             outer_prev = hs[vs[v2].OutgoingHalfedge].PrevHalfedge;
                             outer_next = hs.GetPairHalfedge(loop[i]);
-                            hs[outer_prev].NextHalfedge = outer_next;
-                            hs[outer_next].PrevHalfedge = outer_prev;
+                            hs.SetNextHalfedge(outer_prev, outer_next);
+                            hs.SetPrevHalfedge(outer_next, outer_prev);
                             // and second...
                             outer_prev = hs.GetPairHalfedge(loop[ii]);
                             outer_next = vs[v2].OutgoingHalfedge;
@@ -176,18 +175,18 @@ namespace Plankton
                     // outer_{prev,next} should now be set, so store links in HDS
                     if (outer_prev > -1 && outer_next > -1)
                     {
-                        hs[outer_prev].NextHalfedge = outer_next;
-                        hs[outer_next].PrevHalfedge = outer_prev;
+                        hs.SetNextHalfedge(outer_prev, outer_next);
+                        hs.SetPrevHalfedge(outer_next, outer_prev);
                     }
                     
                     // Link inner halfedges
-                    hs[loop[i]].NextHalfedge = loop[ii];
-                    hs[loop[ii]].PrevHalfedge = loop[i];
+                    hs.SetNextHalfedge(loop[i], loop[ii]);
+                    hs.SetPrevHalfedge(loop[ii], loop[i]);
                     
                     // ensure vertex->outgoing is boundary if vertex is boundary
                     if (is_new[i]) // first is new
                     {
-                        vs[v2].OutgoingHalfedge = loop[i] + 1;
+                        vs.SetOutgoingHalfedge(v2, loop[i] + 1);
                     }
                 }
                 else // both old (non-manifold vertex trickery below)
@@ -202,7 +201,7 @@ namespace Plankton
                         {
                             if (hs[h].AdjacentFace < 0)
                             {
-                                vs[v2].OutgoingHalfedge = h;
+                                vs.SetOutgoingHalfedge(v2, h);
                                 break;
                             }
                         }
@@ -277,7 +276,7 @@ namespace Plankton
             foreach (int h in fhs)
             {
                 if (_mesh.Halfedges.IsBoundary(h)) { _mesh.Halfedges.RemovePairHelper(h); }
-                else { _mesh.Halfedges[h].AdjacentFace = -1; }
+                else { _mesh.Halfedges.SetAdjacentFace(h, -1); }
             }
             this[index] = PlanktonFace.Unset;
         }
@@ -300,6 +299,18 @@ namespace Plankton
             {
                 this._list[index] = value;
             }
+        }
+        
+        public int GetFirstHalfedge(int faceIndex)
+        {
+            return this[faceIndex].FirstHalfedge;
+        }
+        
+        public void SetFirstHalfedge(int faceIndex, int halfedgeIndex)
+        {
+            var face = this[faceIndex];
+            face.FirstHalfedge = halfedgeIndex;
+            this[faceIndex] = face;
         }
         #endregion
 
@@ -325,7 +336,7 @@ namespace Plankton
                         int first = _list[marker].FirstHalfedge;
                         foreach (int h in _mesh.Halfedges.GetFaceCirculator(first))
                         {
-                            _mesh.Halfedges[h].AdjacentFace = marker;
+                            _mesh.Halfedges.SetAdjacentFace(h, marker);
                         }
                     }
                     marker++; // That spot's filled. Advance the marker.
@@ -437,14 +448,14 @@ namespace Plankton
             hs.MakeConsecutive(new_halfedge2, from);
 
             //set the original face's first halfedge to new_he1
-            this[existing_face].FirstHalfedge = new_halfedge1;
+            this.SetFirstHalfedge(existing_face, new_halfedge1);
             //set the new face's first halfedge to new_he2
-            this[new_face_index].FirstHalfedge = new_halfedge2;
+            this.SetFirstHalfedge(new_face_index, new_halfedge2);
             
             //set adjface of new face loop
             foreach (int h in _mesh.Halfedges.GetFaceCirculator(new_halfedge2))
             {
-                hs[h].AdjacentFace = new_face_index;
+                hs.SetAdjacentFace(h, new_face_index);
             }
 
             //think thats all of it!           
@@ -485,12 +496,12 @@ namespace Plankton
 
             // Update retained face's first halfedge, if necessary
             if (this[face].FirstHalfedge == index)
-                this[face].FirstHalfedge = index_next;
+                this.SetFirstHalfedge(face, index_next);
 
             // Go around the dead face, reassigning adjacency
             foreach (int h in hs.GetFaceCirculator(index_next))
             {
-                hs[h].AdjacentFace = face;
+                hs.SetAdjacentFace(h, face);
             }
 
             // Keep the adjacent face, but remove the pair's adjacent face
@@ -515,10 +526,10 @@ namespace Plankton
                 int TriangleFace;
                 if (i == 0) {TriangleFace = f;}
                 else {TriangleFace = this.Add(PlanktonFace.Unset);}                
-                this[TriangleFace].FirstHalfedge = ThisHalfEdge;
-                _mesh.Halfedges[ThisHalfEdge].AdjacentFace = TriangleFace;
+                this.SetFirstHalfedge(TriangleFace, ThisHalfEdge);
+                _mesh.Halfedges.SetAdjacentFace(ThisHalfEdge, TriangleFace);
                 int OutSpoke = _mesh.Halfedges.AddPair(central_vertex, _mesh.Halfedges[ThisHalfEdge].StartVertex, TriangleFace);
-                if (i == 0) { _mesh.Vertices[central_vertex].OutgoingHalfedge = OutSpoke; }
+                if (i == 0) { _mesh.Vertices.SetOutgoingHalfedge(central_vertex, OutSpoke); }
                 _mesh.Halfedges.MakeConsecutive(OutSpoke,ThisHalfEdge);
             }
             for (int i = 0; i < FaceHalfEdges.Length; i++)
@@ -530,13 +541,15 @@ namespace Plankton
                     _mesh.Halfedges.MakeConsecutive(ThisHalfEdge, CountBefore + i*2 + 3);
                     _mesh.Halfedges.MakeConsecutive(CountBefore + (i*2) + 3, CountBefore + (i*2));
                     //set the AdjacentFace of the ingoing spoke                
-                    _mesh.Halfedges[CountBefore + (i * 2) + 3].AdjacentFace = _mesh.Halfedges[ThisHalfEdge].AdjacentFace;
+                    _mesh.Halfedges.SetAdjacentFace(CountBefore + (i * 2) + 3,
+                                                    _mesh.Halfedges[ThisHalfEdge].AdjacentFace);
                 }
                 else
                 {
                     _mesh.Halfedges.MakeConsecutive(ThisHalfEdge, CountBefore + 1);
                     _mesh.Halfedges.MakeConsecutive(CountBefore + 1, CountBefore + (i*2));
-                    _mesh.Halfedges[CountBefore + 1].AdjacentFace = _mesh.Halfedges[ThisHalfEdge].AdjacentFace;
+                    _mesh.Halfedges.SetAdjacentFace(CountBefore + 1,
+                                                    _mesh.Halfedges[ThisHalfEdge].AdjacentFace);
                 }
             }            
             return central_vertex;

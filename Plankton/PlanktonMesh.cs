@@ -75,7 +75,7 @@ namespace Plankton
                     if (P.Halfedges[P.Halfedges.GetPairHalfedge(FaceHalfedges[j])].AdjacentFace != -1)
                     {
                         // D.Vertices[i].OutgoingHalfedge = FaceHalfedges[j];
-                        D.Vertices[D.Vertices.Count-1].OutgoingHalfedge = P.Halfedges.GetPairHalfedge(FaceHalfedges[j]);
+                        D.Vertices.SetOutgoingHalfedge(D.Vertices.Count-1, P.Halfedges.GetPairHalfedge(FaceHalfedges[j]));
                         break;
                     }
                 }
@@ -87,7 +87,7 @@ namespace Plankton
                 {
                     int df = D.Faces.Add(PlanktonFace.Unset);
                     // D.Faces[i].FirstHalfedge = P.PairHalfedge(P.Vertices[i].OutgoingHalfedge);
-                    D.Faces[df].FirstHalfedge = P.Vertices[i].OutgoingHalfedge;
+                    D.Faces.SetFirstHalfedge(df, P.Vertices[i].OutgoingHalfedge);
                 }
             }
 

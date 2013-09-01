@@ -128,7 +128,7 @@ namespace Plankton.Test
             pMesh.Faces.AddFace(2, 3, 0);
 
             // Change outgoing of vert #2 so that we can check it updates
-            pMesh.Vertices[2].OutgoingHalfedge = 4;
+            pMesh.Vertices.SetOutgoingHalfedge(2, 4);
             
             // Split the diagonal edge
             int split_he = 5; // he from v #0 to #2

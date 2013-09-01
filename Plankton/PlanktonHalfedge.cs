@@ -22,9 +22,10 @@ namespace Plankton
         
         internal PlanktonHalfedge(int Start, int AdjFace, int Next)
         {
-            StartVertex = Start;
-            AdjacentFace = AdjFace;
-            NextHalfedge = Next;
+            this.StartVertex = Start;
+            this.AdjacentFace = AdjFace;
+            this.NextHalfedge = Next;
+            this.PrevHalfedge = -1;
         }
         
         /// <summary>

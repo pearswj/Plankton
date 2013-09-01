@@ -45,16 +45,16 @@ namespace PlanktonGh
 
                 HalfA.StartVertex = source.TopologyEdges.GetTopologyVertices(i).I;
 
-                if (pMesh.Vertices [HalfA.StartVertex].OutgoingHalfedge == -1) {
-                    pMesh.Vertices [HalfA.StartVertex].OutgoingHalfedge = pMesh.Halfedges.Count;
+                if (pMesh.Vertices[HalfA.StartVertex].OutgoingHalfedge == -1) {
+                    pMesh.Vertices.SetOutgoingHalfedge(HalfA.StartVertex, pMesh.Halfedges.Count);
                 }
 
                 PlanktonHalfedge HalfB = new PlanktonHalfedge();
 
                 HalfB.StartVertex = source.TopologyEdges.GetTopologyVertices(i).J;
 
-                if (pMesh.Vertices [HalfB.StartVertex].OutgoingHalfedge == -1) {
-                    pMesh.Vertices [HalfB.StartVertex].OutgoingHalfedge = pMesh.Halfedges.Count + 1;
+                if (pMesh.Vertices[HalfB.StartVertex].OutgoingHalfedge == -1) {
+                    pMesh.Vertices.SetOutgoingHalfedge(HalfB.StartVertex, pMesh.Halfedges.Count + 1);
                 }
 
                 bool[] Match;
@@ -112,13 +112,13 @@ namespace PlanktonGh
                 {
                     HalfA.AdjacentFace = ConnectedFaces[0];
                     if (pMesh.Faces[HalfA.AdjacentFace].FirstHalfedge == -1) {
-                        pMesh.Faces[HalfA.AdjacentFace].FirstHalfedge = pMesh.Halfedges.Count;
+                        pMesh.Faces.SetFirstHalfedge(HalfA.AdjacentFace, pMesh.Halfedges.Count);
                     }
                     if (ConnectedFaces.Length > 1)
                     {
                         HalfB.AdjacentFace = ConnectedFaces[1];
                         if (pMesh.Faces[HalfB.AdjacentFace].FirstHalfedge == -1) {
-                            pMesh.Faces[HalfB.AdjacentFace].FirstHalfedge = pMesh.Halfedges.Count + 1;
+                            pMesh.Faces.SetFirstHalfedge(HalfB.AdjacentFace, pMesh.Halfedges.Count + 1);
                         }
                     }
                     else
@@ -131,7 +131,7 @@ namespace PlanktonGh
                     HalfB.AdjacentFace = ConnectedFaces[0];
 
                     if (pMesh.Faces[HalfB.AdjacentFace].FirstHalfedge == -1) {
-                        pMesh.Faces[HalfB.AdjacentFace].FirstHalfedge = pMesh.Halfedges.Count + 1;
+                        pMesh.Faces.SetFirstHalfedge(HalfB.AdjacentFace, pMesh.Halfedges.Count + 1);
                     }
 
                     if (ConnectedFaces.Length > 1)
@@ -139,7 +139,7 @@ namespace PlanktonGh
                         HalfA.AdjacentFace = ConnectedFaces[1];
 
                         if (pMesh.Faces[HalfA.AdjacentFace].FirstHalfedge == -1) {
-                            pMesh.Faces[HalfA.AdjacentFace].FirstHalfedge = pMesh.Halfedges.Count;
+                            pMesh.Faces.SetFirstHalfedge(HalfA.AdjacentFace, pMesh.Halfedges.Count);
                         }
                     }
                     else
@@ -167,15 +167,15 @@ namespace PlanktonGh
                         int PrevPairEdge = source.TopologyEdges.GetEdgeIndex(pMesh.Halfedges[i + 1].StartVertex,StartOfPrevOfPairHalfedge);
 
                         if (source.TopologyEdges.GetTopologyVertices(NextEdge).I == pMesh.Halfedges[i + 1].StartVertex) {
-                            pMesh.Halfedges[i].NextHalfedge = NextEdge * 2;
+                            pMesh.Halfedges.SetNextHalfedge(i, NextEdge * 2);
                         } else {
-                            pMesh.Halfedges[i].NextHalfedge = NextEdge * 2 + 1;
+                            pMesh.Halfedges.SetNextHalfedge(i, NextEdge * 2 + 1);
                         }
 
                         if (source.TopologyEdges.GetTopologyVertices(PrevPairEdge).J == pMesh.Halfedges[i + 1].StartVertex) {
-                            pMesh.Halfedges[i + 1].PrevHalfedge = PrevPairEdge * 2;
+                            pMesh.Halfedges.SetPrevHalfedge(i + 1, PrevPairEdge * 2);
                         } else {
-                            pMesh.Halfedges[i + 1].PrevHalfedge = PrevPairEdge * 2+1;
+                            pMesh.Halfedges.SetPrevHalfedge(i + 1, PrevPairEdge * 2 + 1);
                         }
                         break;
                     }
@@ -193,15 +193,15 @@ namespace PlanktonGh
                         int PrevEdge = source.TopologyEdges.GetEdgeIndex(pMesh.Halfedges[i].StartVertex, StartOfPrevHalfedge);
 
                         if (source.TopologyEdges.GetTopologyVertices(NextPairEdge).I == pMesh.Halfedges[i].StartVertex) {
-                            pMesh.Halfedges[i + 1].NextHalfedge = NextPairEdge * 2;
+                            pMesh.Halfedges.SetNextHalfedge(i + 1, NextPairEdge * 2);
                         } else {
-                            pMesh.Halfedges[i + 1].NextHalfedge = NextPairEdge * 2 + 1;
+                            pMesh.Halfedges.SetNextHalfedge(i + 1, NextPairEdge * 2 + 1);
                         }
 
                         if (source.TopologyEdges.GetTopologyVertices(PrevEdge).J == pMesh.Halfedges[i].StartVertex) {
-                            pMesh.Halfedges[i].PrevHalfedge = PrevEdge * 2;
+                            pMesh.Halfedges.SetPrevHalfedge(i, PrevEdge * 2);
                         } else {
-                            pMesh.Halfedges[i].PrevHalfedge = PrevEdge * 2 + 1;
+                            pMesh.Halfedges.SetPrevHalfedge(i, PrevEdge * 2 + 1);
                         }
                         break;
                     }

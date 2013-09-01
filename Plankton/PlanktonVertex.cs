@@ -5,18 +5,21 @@ namespace Plankton
     /// <summary>
     /// Represents a vertex in Plankton's halfedge mesh data structure.
     /// </summary>
-    public class PlanktonVertex
+    public struct PlanktonVertex
     {
         public int OutgoingHalfedge;
+        public float X;
+        public float Y;
+        public float Z;
         
-        internal PlanktonVertex()
+        /*internal PlanktonVertex()
         {
             this.OutgoingHalfedge = -1;
-        }
+        }*/
         
         internal PlanktonVertex(float x, float y, float z)
         {
-            OutgoingHalfedge = -1;
+            this.OutgoingHalfedge = -1;
             this.X = x;
             this.Y = y;
             this.Z = z;
@@ -28,11 +31,11 @@ namespace Plankton
             // empty
         }
 
-        public float X { get; set; }
+        //public float X { get; set; }
         
-        public float Y { get; set; }
+        //public float Y { get; set; }
         
-        public float Z { get; set; }
+        //public float Z { get; set; }
 
         public PlanktonXYZ ToXYZ()
         {

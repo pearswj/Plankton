@@ -45,7 +45,6 @@ namespace Plankton
         /// <returns>The index of the newly added vertex.</returns>
         internal int Add(PlanktonVertex vertex)
         {
-            if (vertex == null) return -1;
             this._list.Add(vertex);
             return this.Count - 1;
         }
@@ -121,10 +120,12 @@ namespace Plankton
         {
             if (vertexIndex >= 0 && vertexIndex < _list.Count)
             {
-                var v = this._list[vertexIndex];
-                v.X = x;
-                v.Y = y;
-                v.Z = z;
+                this._list[vertexIndex] = new PlanktonVertex() {
+                    OutgoingHalfedge = this.GetOutgoingHalfedge(vertexIndex),
+                    X = x,
+                    Y = y,
+                    Z = z
+                };
             }
             else if (vertexIndex == _list.Count)
             {
@@ -150,10 +151,12 @@ namespace Plankton
         {
             if (vertexIndex >= 0 && vertexIndex < _list.Count)
             {
-                var v = this._list[vertexIndex];
-                v.X = (float)x;
-                v.Y = (float)y;
-                v.Z = (float)z;
+                this._list[vertexIndex] = new PlanktonVertex() {
+                    OutgoingHalfedge = this.GetOutgoingHalfedge(vertexIndex),
+                    X = (float)x,
+                    Y = (float)y,
+                    Z = (float)z
+                };
             }
             else if (vertexIndex == _list.Count)
             {
@@ -162,6 +165,18 @@ namespace Plankton
             else { return false; }
             
             return true;
+        }
+        
+        public int GetOutgoingHalfedge(int vertexIndex)
+        {
+            return this[vertexIndex].OutgoingHalfedge;
+        }
+        
+        public void SetOutgoingHalfedge(int vertexIndex, int halfedgeIndex)
+        {
+            var vertex = this[vertexIndex];
+            vertex.OutgoingHalfedge = halfedgeIndex;
+            this[vertexIndex] = vertex;
         }
         #endregion
         
@@ -187,7 +202,7 @@ namespace Plankton
                         int first = _list[marker].OutgoingHalfedge;
                         foreach (int h in _mesh.Halfedges.GetVertexCirculator(first))
                         {
-                            _mesh.Halfedges[h].StartVertex = marker;
+                            _mesh.Halfedges.SetStartVertex(h, marker);
                         }
                     }
                     marker++; // That spot's filled. Advance the marker.
@@ -401,20 +416,20 @@ namespace Plankton
             foreach (int h in hs.GetVertexCirculator(second))
             {
                 if (h == first) { break; }
-                hs[h].StartVertex = v_new;
+                hs.SetStartVertex(h, v_new);
                 // If new vertex has no outgoing yet and current he is naked...
                 if (this[v_new].OutgoingHalfedge == -1 && hs[h].AdjacentFace == -1)
-                    this[v_new].OutgoingHalfedge = h;
+                    this.SetOutgoingHalfedge(v_new, h);
                 // Also check whether existing vert's he is now incident to new one
                 if (h == this[v_old].OutgoingHalfedge) { reset_v_old = true; }
             }
             // If no naked halfedges, just use 'second'
-            if (this[v_new].OutgoingHalfedge == -1) { this[v_new].OutgoingHalfedge = second; }
+            if (this[v_new].OutgoingHalfedge == -1) { this.SetOutgoingHalfedge(v_new, second); }
 
             // Add the new pair of halfedges from old vertex to new
             int h_new = hs.AddPair(v_old, v_new, hs[second].AdjacentFace);
             int h_new_pair = hs.GetPairHalfedge(h_new);
-            hs[h_new_pair].AdjacentFace = hs[first].AdjacentFace;
+            hs.SetAdjacentFace(h_new_pair, hs[first].AdjacentFace);
 
             // Link new pair into mesh
             hs.MakeConsecutive(hs[first].PrevHalfedge, h_new_pair);
@@ -425,10 +440,10 @@ namespace Plankton
             // Re-set existing vertex's outgoing halfedge, if necessary
             if (reset_v_old)
             {
-                this[v_old].OutgoingHalfedge = h_new;
+                this.SetOutgoingHalfedge(v_old, h_new);
                 foreach (int h in hs.GetVertexCirculator(h_new))
                 {
-                    if (hs[h].AdjacentFace == -1) { this[v_old].OutgoingHalfedge = h; }
+                    if (hs[h].AdjacentFace == -1) { this.SetOutgoingHalfedge(v_old, h); }
                 }
             }
 
@@ -465,7 +480,7 @@ namespace Plankton
             // Store face to keep and set its first halfedge
             int faceIndex = _mesh.Halfedges[halfedgeIndex].AdjacentFace;
             int firstHalfedge = _mesh.Halfedges[halfedgeIndex].NextHalfedge;
-            _mesh.Faces[faceIndex].FirstHalfedge = firstHalfedge;
+            _mesh.Faces.SetFirstHalfedge(faceIndex, firstHalfedge);
 
             // Remove incident halfedges and mark faces for deletion (except first face)
             _mesh.Halfedges.RemovePairHelper(vertexHalfedges[0]);
@@ -478,7 +493,7 @@ namespace Plankton
             // Set adjacent face for all halfedges in hole
             foreach (int h in _mesh.Halfedges.GetFaceCirculator(firstHalfedge))
             {
-                _mesh.Halfedges[h].AdjacentFace = faceIndex;
+                _mesh.Halfedges.SetAdjacentFace(h, faceIndex);
             }
 
             // Mark center vertex for deletion
