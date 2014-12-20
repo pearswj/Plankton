@@ -1,15 +1,29 @@
 language: objective-c
-
 env:
- matrix:
+  matrix:
   - MONO_VERSION="3.10.0"
-
 before_install:
- # Make sure mono is installed
- - wget "http://download.mono-project.com/archive/${MONO_VERSION}/macos-10-x86/MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg"
- - sudo installer -pkg "MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg" -target /
-
+- wget "http://download.mono-project.com/archive/${MONO_VERSION}/macos-10-x86/MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg"
+- sudo installer -pkg "MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg"
+  -target /
 script:
-  - nuget restore src/Plankton.sln -source "https://www.nuget.org/api/v2;https://blooming-hollows-9801.herokuapp.com"
-  - xbuild /p:Configuration=Release src/Plankton.sln
-  - mono src/packages/NUnit.Runners.2.6.3/tools/nunit-console.exe bin/Release/PlanktonTests.dll
+- nuget restore src/Plankton.sln -source "https://www.nuget.org/api/v2;https://blooming-hollows-9801.herokuapp.com"
+- xbuild /p:Configuration=Release src/Plankton.sln
+- mono src/packages/NUnit.Runners.2.6.3/tools/nunit-console.exe bin/Release/PlanktonTests.dll
+before_deploy:
+- mkdir -p dist
+- zip dist/plankton-${TRAVIS_BUILD_NUMBER}.zip LICENSE.txt README.md
+- cd bin/Release
+- zip ../../dist/plankton-${TRAVIS_BUILD_NUMBER}.zip Plankton.dll Plankton.gha
+deploy:
+  provider: s3
+  access_key_id: AKIAIJ6RNS2NO5AJFEWA
+  secret_access_key:
+    secure: nUWLF3C+9In/d861ttUcAAZJFOy+PHc1LJtyY8U8RBSGqddyFCZcxFiPL5nzhOxgNFy1IWV4W+ChkTg7c8r+zHpSlIlB8z/GYdRY/PbRXqElmFbDMqB7lF+frgqPDneD1+zf/2CbwYWauJfCeOfxQ+oNp8wLmpA71QTwdSKzdsA=
+  bucket: erdos
+  local-dir: dist
+  upload-dir: builds
+  acl: public_read
+  #on:
+  #  repo: pearswj/Plankton
+  #  branch: travis
