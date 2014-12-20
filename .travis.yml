@@ -24,6 +24,6 @@ deploy:
   local-dir: dist
   upload-dir: builds
   acl: public_read
-  #on:
-  #  repo: pearswj/Plankton
-  #  branch: travis
+  on:
+    repo: pearswj/Plankton
+    branch: travis
