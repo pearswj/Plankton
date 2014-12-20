@@ -10,6 +10,6 @@ before_install:
  - sudo installer -pkg "MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg" -target /
 
 script:
-  - nuget restore src/PlanktonMono.sln
-  - xbuild /p:Configuration=Release src/PlanktonMono.sln
+  - nuget restore src/Plankton.sln -source "https://www.nuget.org/api/v2;https://blooming-hollows-9801.herokuapp.com"
+  - xbuild /p:Configuration=Release src/Plankton.sln
   - mono src/packages/NUnit.Runners.2.6.3/tools/nunit-console.exe bin/Release/PlanktonTests.dll
