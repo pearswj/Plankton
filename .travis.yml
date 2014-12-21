@@ -7,15 +7,13 @@ before_install:
 - sudo installer -pkg "MonoFramework-MDK-${MONO_VERSION}.macos10.xamarin.x86.pkg"
   -target /
 script:
-- nuget restore src/Plankton.sln -source "https://www.nuget.org/api/v2;https://blooming-hollows-9801.herokuapp.com"
+- nuget restore src/Plankton.sln
 - xbuild /p:Configuration=Release src/Plankton.sln
 - mono src/packages/NUnit.Runners.2.6.3/tools/nunit-console.exe bin/Release/PlanktonTests.dll
 before_deploy:
 - mkdir -p dist
 - zip dist/plankton-${TRAVIS_BUILD_NUMBER}.zip LICENSE.txt README.md
-- cd bin/Release
-- zip ../../dist/plankton-${TRAVIS_BUILD_NUMBER}.zip Plankton.dll Plankton.gha
-- cd ../..
+- zip -j dist/plankton-${TRAVIS_BUILD_NUMBER}.zip bin/Release/Plankton.dll bin/Release/Plankton.gha
 deploy:
   provider: s3
   access_key_id: AKIAIJ6RNS2NO5AJFEWA
