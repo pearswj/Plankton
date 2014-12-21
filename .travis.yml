@@ -21,9 +21,8 @@ deploy:
   secret_access_key:
     secure: nUWLF3C+9In/d861ttUcAAZJFOy+PHc1LJtyY8U8RBSGqddyFCZcxFiPL5nzhOxgNFy1IWV4W+ChkTg7c8r+zHpSlIlB8z/GYdRY/PbRXqElmFbDMqB7lF+frgqPDneD1+zf/2CbwYWauJfCeOfxQ+oNp8wLmpA71QTwdSKzdsA=
   bucket: erdos
+  skip_cleanup: true
   local-dir: dist
   upload-dir: builds
-  acl: public_read
   on:
-    repo: pearswj/Plankton
-    branch: travis
+    all_branches: true
