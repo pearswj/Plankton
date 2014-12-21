@@ -15,6 +15,7 @@ before_deploy:
 - zip dist/plankton-${TRAVIS_BUILD_NUMBER}.zip LICENSE.txt README.md
 - cd bin/Release
 - zip ../../dist/plankton-${TRAVIS_BUILD_NUMBER}.zip Plankton.dll Plankton.gha
+- cd ../..
 deploy:
   provider: s3
   access_key_id: AKIAIJ6RNS2NO5AJFEWA
