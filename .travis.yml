@@ -5,6 +5,7 @@ env:
   - ARTIFACTS_KEY=AKIAIJ6RNS2NO5AJFEWA
   - secure: "BjS6rHI567Xea+fiTrK6d8NPRlkaY1AK177f6Fi58Inm850Al9i3DCaBLZjVB8oNmVa/KpHv32jM3nebIS5csB7CRDXTlhoX/cHJvTDUWugFQ8zTW+h9pNAOIPHa5FUdmC/szRDNazKB3/cDeKXxETW+QyBgsYpfjJ2MfgZcNDQ="
   - ARTIFACTS_BUCKET=erdos
+  - ARTIFACTS_REGION=eu-west-1
 solution: src/Plankton.sln
 install:
 - nuget restore src/Plankton.sln -source https://www.nuget.org/api/v2/ -source https://pyget.herokuapp.com/
@@ -14,8 +15,5 @@ script:
 after_success:
 - zip plankton-${TRAVIS_BUILD_NUMBER}.zip LICENSE.txt README.md
 - zip -j plankton-${TRAVIS_BUILD_NUMBER}.zip bin/Release/Plankton.dll bin/Release/Plankton.gha
-addons:
-  artifacts: true
-  s3_region: "eu-west-1"
-  paths:
-  - plankton-${TRAVIS_BUILD_NUMBER}.zip
+- curl -sL https://raw.githubusercontent.com/travis-ci/artifacts/master/install | bash
+- artifacts upload --target-paths "builds" plankton-${TRAVIS_BUILD_NUMBER}.zip
