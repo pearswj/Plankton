@@ -4,7 +4,7 @@ env:
   global:
   - ARTIFACTS_KEY=AKIAIJ6RNS2NO5AJFEWA
   - secure: "BjS6rHI567Xea+fiTrK6d8NPRlkaY1AK177f6Fi58Inm850Al9i3DCaBLZjVB8oNmVa/KpHv32jM3nebIS5csB7CRDXTlhoX/cHJvTDUWugFQ8zTW+h9pNAOIPHa5FUdmC/szRDNazKB3/cDeKXxETW+QyBgsYpfjJ2MfgZcNDQ="
-  - ARTIFACTS_BUCKET=erdos
+  - ARTIFACTS_BUCKET=frmt
   - ARTIFACTS_REGION=eu-west-1
 solution: src/Plankton.sln
 install:
