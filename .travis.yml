@@ -16,4 +16,4 @@ after_success:
 - zip plankton-${TRAVIS_BUILD_NUMBER}.zip LICENSE.txt README.md
 - zip -j plankton-${TRAVIS_BUILD_NUMBER}.zip bin/Release/Plankton.dll bin/Release/Plankton.gha
 - curl -sL https://raw.githubusercontent.com/travis-ci/artifacts/master/install | bash
-- artifacts upload --target-paths "builds" plankton-${TRAVIS_BUILD_NUMBER}.zip
+- artifacts upload --target-paths="builds" --permissions="public" --s3-region="eu-west-1" plankton-${TRAVIS_BUILD_NUMBER}.zip
